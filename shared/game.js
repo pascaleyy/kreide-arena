@@ -30,8 +30,27 @@
     { name: "Schrotkreide", glyph: "S", color: "#ffad66", w: 2, info: "5 Würfe im Fächer, kurze Reichweite" },
     { name: "Schnellfeuer", glyph: "R", color: "#ffd95e", w: 2, info: "Wirft sehr schnell" },
     { name: "Riesenkreide", glyph: "K", color: "#c3a6ff", w: 2, info: "2 Schaden, prallt zweimal ab" },
-    { name: "Turbo",        glyph: "»", color: "#b8f075", w: 2, info: "8 Sekunden schneller laufen" }
+    { name: "Turbo",        glyph: "»", color: "#b8f075", w: 2, info: "8 Sekunden schneller laufen" },
+    { name: "Geistersprint", glyph: "G", color: "#9ef0ff", w: 2, info: "Einmal mit Q durch Wände sprinten" }
   ];
+
+  // Ghost sprint: where do you land? Never inside a wall or outside the arena.
+  // Aim for PHASE_DIST; if that spot is blocked, keep going until the far side of the wall,
+  // otherwise fall back to the last free spot before it. Returns null if there is no free spot.
+  const PHASE_DIST = 230, PHASE_OVERSHOOT = 160;
+  function phaseTarget(geo, x, y, dx, dy) {
+    const r = C.PR + 1, step = 4;
+    for (let d = PHASE_DIST; d <= PHASE_DIST + PHASE_OVERSHOOT; d += step) {
+      const tx = x + dx * d, ty = y + dy * d;
+      if (tx < r || tx > geo.W - r || ty < r || ty > geo.H - r) break;
+      if (!blocked(geo, tx, ty, r)) return [tx, ty];
+    }
+    for (let d = PHASE_DIST - step; d >= 40; d -= step) {
+      const tx = x + dx * d, ty = y + dy * d;
+      if (!blocked(geo, tx, ty, r)) return [tx, ty];
+    }
+    return null;
+  }
 
   // Maps are laid out on a 1600x900 grid and scaled to the round's size.
   const pillars = [];
@@ -108,5 +127,5 @@
   // a throw that bounced off a wall or a shield hits harder
   const dmgOf = (kind, bounced) => bounced ? Math.max(2, WEAP[kind].dmg) : WEAP[kind].dmg;
 
-  return { C, COLORS, SIZES, WEAP, PU, MAPS, clamp, geometry, blocked, pushOut, stepMove, segDist, dmgOf };
+  return { C, COLORS, SIZES, WEAP, PU, MAPS, clamp, geometry, blocked, pushOut, stepMove, segDist, dmgOf, phaseTarget };
 });

@@ -52,7 +52,8 @@
   let you = null;
   let geo = null, mapKey = "";
   const pred = { x: 0, y: 0, dash: 0, dashCd: 0, alive: false };
-  let pending = [], seq = 0, shCount = 0;
+  let pending = [], seq = 0, shCount = 0, phCount = 0;
+  const trails = []; // ghost sprint streaks
   const visOff = { x: 0, y: 0 };
   const feed = [], fx = [];
   let shake = 0, flash = 0, lastSt = "", lastBoard = 0;
@@ -166,6 +167,12 @@
         break;
       case "dummy": puff(ev.x, ev.y, "#ece8dc", 18); break;
       case "refl": puff(ev.x, ev.y, "#7cc4ff", 10); break;
+      case "phase": {
+        const col = COLORS[ev.c] || "#9ef0ff";
+        trails.push({ x1: ev.x1, y1: ev.y1, x2: ev.x2, y2: ev.y2, c: col, life: 0.5 });
+        puff(ev.x1, ev.y1, "#9ef0ff", 10); puff(ev.x2, ev.y2, "#9ef0ff", 14);
+        break;
+      }
       case "bounce": puff(ev.x, ev.y, ev.c || "#ece8dc", 3); break;
       case "pu": {
         const p = PU[ev.u];
@@ -256,6 +263,7 @@
     if (typing()) return;
     keys.add(e.code);
     if (e.code === "KeyE" || e.code === "KeyF") shCount++;
+    if (e.code === "KeyQ" && !e.repeat) phCount++;
     if (joined && ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
   });
   window.addEventListener("keyup", e => keys.delete(e.code));
@@ -484,12 +492,14 @@
         if (pending.length > 180) pending.shift();
       }
       const a = Math.atan2(mouse.y - pred.y, mouse.x - pred.x);
-      send({ t: "in", s: seq, k, a: Math.round(a * 1000) / 1000, dt: Math.round(dt * 10000) / 10000, f: mouse.down, sh: shCount });
+      send({ t: "in", s: seq, k, a: Math.round(a * 1000) / 1000, dt: Math.round(dt * 10000) / 10000, f: mouse.down, sh: shCount, ph: phCount });
     }
     visOff.x *= 0.85; visOff.y *= 0.85;
 
     for (const f of fx) { f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= 0.9; f.vy *= 0.9; f.life -= dt; }
     for (let i = fx.length - 1; i >= 0; i--) if (fx[i].life <= 0) fx.splice(i, 1);
+    for (const t of trails) t.life -= dt;
+    for (let i = trails.length - 1; i >= 0; i--) if (trails[i].life <= 0) trails.splice(i, 1);
     shake = Math.max(0, shake - dt * 30); flash = Math.max(0, flash - dt * 3);
 
     draw(now);
@@ -538,6 +548,15 @@
     }
 
     for (const f of fx) { ctx.globalAlpha = clamp(f.life * 2, 0, 1) * 0.8; ctx.fillStyle = f.c; ctx.fillRect(f.x - 2, f.y - 2, 4, 4); }
+    for (const t of trails) {
+      ctx.globalAlpha = clamp(t.life * 2, 0, 1) * 0.7;
+      ctx.strokeStyle = "#9ef0ff"; ctx.lineWidth = PR * 1.6; ctx.lineCap = "round";
+      ctx.setLineDash([2, 14]);
+      ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = t.c; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke();
+    }
     ctx.globalAlpha = 1;
 
     // timer & round info
@@ -562,6 +581,11 @@
       bar(40, y, "Sprint", 1 - pred.dashCd / C.DASH_CD, "#7ee8c4");
       if (you.sh) { y -= 22; bar(40, y, "Schild", 1 - you.shCd / C.SHIELD_CD, "#7cc4ff"); }
       if (you.tb > 0) { y -= 22; bar(40, y, "Turbo", you.tb / C.TURBO_T, "#b8f075"); }
+      if (you.ph > 0) {
+        y -= 22;
+        ctx.font = "15px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillStyle = "#9ef0ff"; ctx.fillText("Geistersprint bereit · Q", 40, y);
+      }
       y -= 26;
       ctx.font = "16px 'Permanent Marker', cursive"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
       ctx.fillStyle = WEAP[you.w].color;

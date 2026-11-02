@@ -79,7 +79,7 @@ class Room {
     p.dash = 0; p.dashCd = 0;
   }
   resetForRound(p) {
-    p.kills = 0; p.mh = C.BASE_HP; p.w = 0; p.hasSh = false; p.shT = 0; p.shCd = 0; p.turbo = 0;
+    p.kills = 0; p.mh = C.BASE_HP; p.w = 0; p.hasSh = false; p.shT = 0; p.shCd = 0; p.turbo = 0; p.phase = 0;
     this.spawn(p);
   }
   setMap(m, z) {
@@ -149,8 +149,25 @@ class Room {
       case 2: p.hasSh = true; p.shCd = 0; break;
       case 3: case 4: case 5: p.w = type - 2; break;
       case 6: p.turbo = C.TURBO_T; break;
+      case 7: p.phase = 1; break;
     }
     this.events.push({ k: "pu", p: p.id, u: type, x: Math.round(p.x), y: Math.round(p.y) });
+  }
+  // one-time ghost sprint: through walls, always landing on free ground
+  phaseSprint(p) {
+    if (!p.alive || p.phase <= 0 || this.g.st === "end") return;
+    let dx = 0, dy = 0;
+    if (p.lastK & 1) dy -= 1;
+    if (p.lastK & 2) dy += 1;
+    if (p.lastK & 4) dx -= 1;
+    if (p.lastK & 8) dx += 1;
+    if (!dx && !dy) { dx = Math.cos(p.a); dy = Math.sin(p.a); }
+    const len = Math.hypot(dx, dy) || 1;
+    const t = KA.phaseTarget(this.geo, p.x, p.y, dx / len, dy / len);
+    if (!t) return; // nowhere to land: keep the charge
+    this.events.push({ k: "phase", p: p.id, x1: Math.round(p.x), y1: Math.round(p.y), x2: Math.round(t[0]), y2: Math.round(t[1]), c: p.color });
+    p.x = t[0]; p.y = t[1];
+    p.phase = 0; p.dash = 0;
   }
   pickPuType() {
     const total = PU.reduce((s, p) => s + p.w, 0);
@@ -282,7 +299,7 @@ class Room {
       const you = p.joined ? {
         id: p.id, ack: p.ack, x: r1(p.x), y: r1(p.y), dash: r1(p.dash * 1000) / 1000, dashCd: r1(p.dashCd * 1000) / 1000,
         al: p.alive, rs: r1(Math.max(0, p.respawn)), sh: p.hasSh, shCd: r1(Math.max(0, p.shCd)), shT: p.shT > 0,
-        tb: r1(Math.max(0, p.turbo)), w: p.w, hp: p.hp, mh: p.mh
+        tb: r1(Math.max(0, p.turbo)), w: p.w, hp: p.hp, mh: p.mh, ph: p.phase
       } : { id: p.id, spectator: true };
       send(p, head + ',"you":' + JSON.stringify(you) + "}");
     }
@@ -304,6 +321,7 @@ wsLite.attach(server, { path: "/ws", maxPayload: 2048 }, (ws, req) => {
     id: nextPlayerId++, ws, joined: false, name: "", color: 0,
     x: 0, y: 0, a: 0, hp: C.BASE_HP, mh: C.BASE_HP, alive: false, respawn: 0, prot: 0,
     dash: 0, dashCd: 0, fireCd: 0, fireHeld: false, w: 0, hasSh: false, shT: 0, shCd: 0, shCount: 0, turbo: 0,
+    phase: 0, phCount: 0, lastK: 0,
     kills: 0, ack: 0, budget: 0, msgs: 0, msgWindow: Date.now(), alivePing: true
   };
   room.players.set(p.id, p);
@@ -325,7 +343,7 @@ wsLite.attach(server, { path: "/ws", maxPayload: 2048 }, (ws, req) => {
       p.color = clamp(Math.round(num(m.c) || 0), 0, KA.COLORS.length - 1);
       if (!p.joined) {
         p.joined = true;
-        p.kills = 0; p.mh = C.BASE_HP; p.w = 0; p.hasSh = false; p.turbo = 0;
+        p.kills = 0; p.mh = C.BASE_HP; p.w = 0; p.hasSh = false; p.turbo = 0; p.phase = 0;
         room.spawn(p);
         room.events.push({ k: "join", p: p.id });
       }
@@ -349,7 +367,10 @@ wsLite.attach(server, { path: "/ws", maxPayload: 2048 }, (ws, req) => {
       dt = clamp(dt, 0, 0.05);
       dt = Math.min(dt, p.budget); // no speed hacks: movement time can't outrun real time
       p.budget -= dt;
-      KA.stepMove(room.geo, p, Math.round(k) & 31, dt, p.turbo > 0);
+      p.lastK = Math.round(k) & 31;
+      KA.stepMove(room.geo, p, p.lastK, dt, p.turbo > 0);
+      const pc = num(m.ph);
+      if (pc != null && pc > p.phCount) { p.phCount = pc; room.phaseSprint(p); }
     }
   });
 

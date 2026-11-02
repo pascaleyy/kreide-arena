@@ -11,6 +11,7 @@ Kleines Online-Multiplayer-Spiel für zwischendurch. Ihr werft mit Kreide aufein
 | Linksklick | werfen |
 | Leertaste | Sprint |
 | E oder Rechtsklick | Schild (wenn eingesammelt) |
+| Q | Geistersprint (einmalig, wenn eingesammelt) |
 
 ## Regeln
 
@@ -19,7 +20,8 @@ Kleines Online-Multiplayer-Spiel für zwischendurch. Ihr werft mit Kreide aufein
 - Map-Größe je nach Spielerzahl: klein (2), mittel (3–4), groß (ab 5).
 - Würfe, die von einer Wand oder einem Schild abprallen, machen mindestens 2 Schaden (roter Rand).
 - Power-ups gelten nur für die laufende Runde, Waffen verliert man zusätzlich beim Tod:
-  Heilung, Extraleben, Schild, Schrotkreide, Schnellfeuer, Riesenkreide, Turbo.
+  Heilung, Extraleben, Schild, Schrotkreide, Schnellfeuer, Riesenkreide, Turbo, Geistersprint.
+- Geistersprint: einmal mit Q ein Stück durch Wände sprinten, in Laufrichtung (oder Blickrichtung, wenn du stehst). Man landet immer auf freiem Boden, nie in einer Wand.
 
 ## Räume
 
