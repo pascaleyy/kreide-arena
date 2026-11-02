@@ -1,0 +1,13 @@
+{
+  "name": "kreide-arena",
+  "version": "1.0.0",
+  "description": "Kleines Online-Multiplayer-Spiel für zwischendurch: mit Kreide werfen, Runden gewinnen.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

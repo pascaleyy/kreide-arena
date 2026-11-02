@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: kreide-arena
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz

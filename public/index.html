@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kreide-Arena</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="description" content="Kreide-Arena: kleines Online-Multiplayer-Spiel für zwischendurch.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a schoolyard at night. The arena fills the screen, chalk scoreboard to the right. */
+:root {
+  --asphalt: #262a31;
+  --asphalt-2: #1d2026;
+  --asphalt-3: #343a43;
+  --chalk: #ece8dc;
+  --chalk-dim: #a9a79e;
+  --accent: #ffd95e;
+  --danger: #ff7a7a;
+  --ok: #7ee8c4;
+  --display: "Permanent Marker", "Comic Sans MS", "Segoe Print", cursive;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--asphalt-2);
+  color: var(--chalk);
+  font-family: var(--body);
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: max(12px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  gap: 10px;
+}
+[hidden] { display: none !important; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.9rem;
+  margin: 0;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  transform: rotate(-1.5deg);
+}
+.status { display: inline-flex; align-items: center; gap: 7px; font-size: 0.85rem; color: var(--chalk-dim); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--chalk-dim); }
+.status[data-s="online"] .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+.status[data-s="off"] .dot { background: var(--danger); }
+.roomtag { display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--chalk-dim); }
+.roomtag b { color: var(--chalk); }
+.linkbtn {
+  font: inherit; font-size: 0.82rem; color: var(--chalk);
+  background: var(--asphalt-3); border: 1px solid var(--chalk-dim); border-radius: 6px;
+  padding: 3px 9px; cursor: pointer;
+}
+.linkbtn:hover { border-color: var(--accent); }
+.linkbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.keys { font-size: 0.82rem; color: var(--chalk-dim); margin-left: auto; }
+kbd {
+  font-family: var(--body); font-size: 0.78rem;
+  border: 1px solid var(--chalk-dim); border-bottom-width: 2px; border-radius: 4px;
+  padding: 0 5px; color: var(--chalk);
+}
+.main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 12px; }
+.stage { position: relative; min-width: 0; min-height: 0; border-radius: 10px; overflow: hidden; background: var(--asphalt); }
+canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+aside { display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; overflow-y: auto; }
+aside h2 { font-family: var(--display); font-weight: 400; font-size: 1.15rem; margin: 0 0 6px; color: var(--chalk); }
+.board ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.board li {
+  display: grid; grid-template-columns: 14px minmax(0, 1fr) auto auto; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 6px; font-variant-numeric: tabular-nums;
+}
+.board li.me { background: var(--asphalt-3); }
+.board .sw { width: 12px; height: 12px; border-radius: 50%; }
+.board .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board .pts { font-weight: 700; min-width: 2ch; text-align: right; }
+.board .wins { font-size: 0.78rem; color: var(--accent); }
+.goal { font-size: 0.8rem; color: var(--chalk-dim); margin-top: 6px; line-height: 1.4; }
+.feedbox ul, .legend ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 0.85rem; color: var(--chalk-dim); }
+.feedbox li { overflow-wrap: anywhere; }
+.legend ul { font-size: 0.8rem; gap: 4px; }
+.legend b { display: inline-block; width: 1.4em; text-align: center; font-family: var(--display); font-weight: 400; }
+.overlay {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--asphalt-2) 72%, transparent); padding: 16px;
+}
+.card {
+  background: var(--asphalt); border: 2px dashed var(--chalk-dim); border-radius: 12px;
+  padding: 22px 24px; width: min(380px, 100%); display: grid; gap: 14px; text-align: center;
+}
+.card h2 { font-family: var(--display); font-weight: 400; font-size: 1.7rem; margin: 0; color: var(--accent); text-wrap: balance; }
+.card p { margin: 0; color: var(--chalk-dim); line-height: 1.45; }
+.card ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.card ol li { display: flex; justify-content: space-between; gap: 12px; }
+.card .next { font-size: 0.9rem; color: var(--chalk); }
+label { font-size: 0.85rem; color: var(--chalk-dim); text-align: left; display: grid; gap: 5px; }
+input[type="text"] {
+  font: inherit; font-size: 1.05rem; padding: 9px 11px; border-radius: 8px;
+  border: 2px solid var(--asphalt-3); background: var(--asphalt-2); color: var(--chalk);
+}
+input[type="text"]:focus-visible { outline: none; border-color: var(--accent); }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.swatches button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; padding: 0; }
+.swatches button[aria-pressed="true"] { border-color: var(--chalk); transform: scale(1.12); }
+.swatches button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn {
+  font-family: var(--display); font-size: 1.2rem; padding: 10px 18px; border-radius: 10px; border: none;
+  background: var(--accent); color: var(--asphalt-2); cursor: pointer; transform: rotate(-0.8deg);
+}
+.btn:hover { transform: rotate(0.8deg) scale(1.03); }
+.btn:focus-visible { outline: 3px solid var(--chalk); outline-offset: 3px; }
+.btn:disabled { opacity: 0.5; cursor: wait; }
+.toast {
+  position: absolute; left: 50%; top: 64px; transform: translateX(-50%);
+  font-family: var(--display); font-size: 1.4rem; color: var(--danger);
+  pointer-events: none; text-align: center; white-space: nowrap;
+}
+.toast small { display: block; font-family: var(--body); font-size: 0.85rem; color: var(--chalk-dim); }
+@media (max-width: 760px) {
+  .main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  aside { flex-direction: row; flex-wrap: wrap; max-height: 40vh; }
+  .board, .feedbox { flex: 1 1 160px; }
+  .keys, .legend { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn:hover, h1 { transform: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kreide-Arena</h1>
+  <span class="status" id="status" data-s="wait"><span class="dot"></span><span id="statusText">Verbinde…</span></span>
+  <span class="roomtag">Raum <b id="roomName">haupt</b> <button class="linkbtn" id="copyBtn" type="button">Link kopieren</button></span>
+  <span class="keys"><kbd>WASD</kbd> laufen · Maus zielen · <kbd>Klick</kbd> werfen · <kbd>Leertaste</kbd> Sprint · <kbd>E</kbd>/<kbd>Rechtsklick</kbd> Schild</span>
+</header>
+
+<div class="main">
+  <div class="stage" id="stage">
+    <canvas id="cv" tabindex="0" aria-label="Spielfeld"></canvas>
+
+    <div class="overlay" id="joinOv">
+      <form class="card" id="joinForm">
+        <h2>Ab auf den Pausenhof</h2>
+        <p>Eine Runde dauert 3 Minuten. Wer zuerst 10 Leute erwischt oder am Ende die meisten hat, gewinnt die Runde. Jede Runde gibt es eine neue Map.</p>
+        <label for="nameIn">Dein Name
+          <input type="text" id="nameIn" maxlength="14" autocomplete="off" placeholder="z. B. Pascal" required>
+        </label>
+        <div class="swatches" id="swatches" role="group" aria-label="Farbe wählen"></div>
+        <button class="btn" type="submit" id="joinBtn">Mitspielen</button>
+        <p id="joinHint" hidden></p>
+      </form>
+    </div>
+
+    <div class="overlay" id="endOv" hidden>
+      <div class="card">
+        <h2 id="endTitle">Runde vorbei</h2>
+        <ol id="endList"></ol>
+        <p id="endWins"></p>
+        <p class="next" id="endNext"></p>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+  </div>
+
+  <aside>
+    <section class="board">
+      <h2>Kills diese Runde</h2>
+      <ol id="board"></ol>
+      <div class="goal" id="goal"></div>
+    </section>
+    <section class="feedbox">
+      <h2>Was passiert</h2>
+      <ul id="feed"></ul>
+    </section>
+    <section class="legend">
+      <h2>Power-ups</h2>
+      <ul id="legend"></ul>
+    </section>
+  </aside>
+</div>
+
+<script src="/game.js"></script>
+<script src="/client.js"></script>
+</body>
+</html>
