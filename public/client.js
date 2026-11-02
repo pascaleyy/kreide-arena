@@ -167,6 +167,10 @@
         break;
       case "dummy": puff(ev.x, ev.y, "#ece8dc", 18); break;
       case "refl": puff(ev.x, ev.y, "#7cc4ff", 10); break;
+      case "overheat":
+        puff(ev.x, ev.y, "#ff7a7a", 12);
+        if (ev.p === myId) showToast("Überhitzt!", "Kurz abkühlen lassen", 1400, "var(--danger)");
+        break;
       case "phase": {
         const col = COLORS[ev.c] || "#9ef0ff";
         trails.push({ x1: ev.x1, y1: ev.y1, x2: ev.x2, y2: ev.y2, c: col, life: 0.5 });
@@ -581,6 +585,15 @@
       bar(40, y, "Sprint", 1 - pred.dashCd / C.DASH_CD, "#7ee8c4");
       if (you.sh) { y -= 22; bar(40, y, "Schild", 1 - you.shCd / C.SHIELD_CD, "#7cc4ff"); }
       if (you.tb > 0) { y -= 22; bar(40, y, "Turbo", you.tb / C.TURBO_T, "#b8f075"); }
+      if (you.w === 2) {
+        y -= 22;
+        const over = you.oh > 0;
+        ctx.font = "15px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillStyle = over ? "#ff7a7a" : "rgba(236,232,220,0.65)"; ctx.fillText(over ? "Heiß!" : "Hitze", 40, y);
+        ctx.fillStyle = "rgba(236,232,220,0.15)"; ctx.fillRect(102, y - 5, 110, 10);
+        ctx.fillStyle = over ? "#ff7a7a" : you.ht > 0.66 ? "#ffad66" : "#ffd95e";
+        ctx.fillRect(102, y - 5, 110 * (over ? you.oh / C.OVERHEAT_T : clamp(you.ht, 0, 1)), 10);
+      }
       if (you.ph > 0) {
         y -= 22;
         ctx.font = "15px 'Atkinson Hyperlegible', system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";

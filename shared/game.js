@@ -10,7 +10,9 @@
     BASE_HP: 3, MAX_HP_CAP: 5, WIN_KILLS: 10, ROUND_T: 180, END_T: 7,
     RESPAWN: 2, SPAWN_PROT: 1.5, MAX_B: 14,
     SHIELD_T: 0.9, SHIELD_CD: 4, TURBO_T: 8, TURBO_MULT: 1.35,
-    MAX_PLAYERS: 12, TICK: 30
+    MAX_PLAYERS: 12, TICK: 30,
+    // Schnellfeuer overheats: +1 heat per throw, cools 3/s; at 10 it locks for 2.5 s (~2 s of non-stop fire)
+    HEAT_MAX: 10, HEAT_COOL: 3, OVERHEAT_T: 2.5
   };
 
   const COLORS = ["#ff8fb1", "#ffd95e", "#7ee8c4", "#7cc4ff", "#c3a6ff", "#ffad66", "#b8f075", "#ff7a7a"];
@@ -28,7 +30,7 @@
     { name: "Extraleben",   glyph: "♥", color: "#ff8fb1", w: 2, info: "+1 maximales Leben (bis 5)" },
     { name: "Schild",       glyph: "◐", color: "#7cc4ff", w: 2, info: "Mit E wirfst du Würfe zurück" },
     { name: "Schrotkreide", glyph: "S", color: "#ffad66", w: 2, info: "5 Würfe im Fächer, kurze Reichweite" },
-    { name: "Schnellfeuer", glyph: "R", color: "#ffd95e", w: 2, info: "Wirft sehr schnell" },
+    { name: "Schnellfeuer", glyph: "R", color: "#ffd95e", w: 2, info: "Wirft sehr schnell, überhitzt bei Dauerfeuer" },
     { name: "Riesenkreide", glyph: "K", color: "#c3a6ff", w: 2, info: "2 Schaden, prallt zweimal ab" },
     { name: "Turbo",        glyph: "»", color: "#b8f075", w: 2, info: "8 Sekunden schneller laufen" },
     { name: "Geistersprint", glyph: "G", color: "#9ef0ff", w: 2, info: "Einmal mit Q durch Wände sprinten" }

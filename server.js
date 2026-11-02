@@ -116,6 +116,13 @@ class Room {
   fire(p) {
     const wp = WEAP[p.w];
     p.fireCd = wp.cd;
+    if (p.w === 2) {
+      p.heat += 1;
+      if (p.heat >= C.HEAT_MAX) {
+        p.heat = C.HEAT_MAX; p.overheat = C.OVERHEAT_T;
+        this.events.push({ k: "overheat", p: p.id, x: Math.round(p.x), y: Math.round(p.y) });
+      }
+    }
     const bx = p.x + Math.cos(p.a) * (C.PR + 6), by = p.y + Math.sin(p.a) * (C.PR + 6);
     if (KA.blocked(this.geo, bx, by, wp.rad)) return;
     const own = this.bullets.filter(b => b.owner === p.id).length;
@@ -211,8 +218,11 @@ class Room {
     for (const p of players) {
       p.budget = Math.min(0.3, p.budget + dt);
       p.fireCd -= dt; p.prot -= dt; p.shT -= dt; p.shCd -= dt; p.turbo -= dt;
+      if (p.overheat > 0) { p.overheat -= dt; if (p.overheat <= 0) { p.overheat = 0; p.heat = 0; } }
+      else p.heat = Math.max(0, p.heat - C.HEAT_COOL * dt);
+      if (p.w !== 2) { p.heat = 0; p.overheat = 0; }
       if (!p.alive && fighting) { p.respawn -= dt; if (p.respawn <= 0) this.spawn(p); }
-      if (p.alive && p.fireHeld && p.fireCd <= 0 && fighting) this.fire(p);
+      if (p.alive && p.fireHeld && p.fireCd <= 0 && p.overheat <= 0 && fighting) this.fire(p);
     }
 
     // bullets
@@ -299,7 +309,8 @@ class Room {
       const you = p.joined ? {
         id: p.id, ack: p.ack, x: r1(p.x), y: r1(p.y), dash: r1(p.dash * 1000) / 1000, dashCd: r1(p.dashCd * 1000) / 1000,
         al: p.alive, rs: r1(Math.max(0, p.respawn)), sh: p.hasSh, shCd: r1(Math.max(0, p.shCd)), shT: p.shT > 0,
-        tb: r1(Math.max(0, p.turbo)), w: p.w, hp: p.hp, mh: p.mh, ph: p.phase
+        tb: r1(Math.max(0, p.turbo)), w: p.w, hp: p.hp, mh: p.mh, ph: p.phase,
+        ht: Math.round(p.heat / C.HEAT_MAX * 100) / 100, oh: r1(p.overheat)
       } : { id: p.id, spectator: true };
       send(p, head + ',"you":' + JSON.stringify(you) + "}");
     }
@@ -321,7 +332,7 @@ wsLite.attach(server, { path: "/ws", maxPayload: 2048 }, (ws, req) => {
     id: nextPlayerId++, ws, joined: false, name: "", color: 0,
     x: 0, y: 0, a: 0, hp: C.BASE_HP, mh: C.BASE_HP, alive: false, respawn: 0, prot: 0,
     dash: 0, dashCd: 0, fireCd: 0, fireHeld: false, w: 0, hasSh: false, shT: 0, shCd: 0, shCount: 0, turbo: 0,
-    phase: 0, phCount: 0, lastK: 0,
+    phase: 0, phCount: 0, lastK: 0, heat: 0, overheat: 0,
     kills: 0, ack: 0, budget: 0, msgs: 0, msgWindow: Date.now(), alivePing: true
   };
   room.players.set(p.id, p);
